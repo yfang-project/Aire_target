@@ -1,6 +1,6 @@
 # CNN for Aire's target choices
 
-To investigate Aire’s target choices, we built and trained a CNN model with dilated convolutional layers and residual skip connections to distinguish the extended-promoter sequences of Aire-induced and Aire-neutral genes. We followed the pre-training and then fine-tuning paradigm, given the relatively small number of Aire-induced and Aire-neutral genes compared with the typical training sizes employed for large-scale models. Below detailed the required coding environment and script manual.
+To investigate Aire’s target choices, we built and trained a CNN model with dilated convolutional layers and residual skip connections to distinguish the extended-promoter sequences of Aire-induced and Aire-neutral genes. We followed the pre-training and then fine-tuning paradigm, given the relatively small number of Aire-induced and Aire-neutral genes compared with the typical training sizes employed for large-scale models. Below detailed the required coding environment and script usage.
 
 ## Pre-training
 ### Environment setup
@@ -25,11 +25,11 @@ python run_pretrain.py ${tfr_path} ${loss} ${weight}
 
 ## Mandatory input:
   ${tfr_path}: The directory containing the modified datasets of Basenji2 for pre-training.
-  ${loss}: The id of loss used for pre-training: 
+  ${loss}: The id of the loss used for pre-training: 
     ${loss} == 1: tf.keras.losses.Poisson()
     ${loss} == 2: MSEMultinomialPretrain(total_weight = ${weight})
     ${loss} == 3: PoissonMultinomialPretrain(total_weight = ${weight})
-  ${weight}: An argument for loss function.
+  ${weight}: An argument for the loss function.
 ```
 ## Fine-tuning
 ### Environment setup

@@ -2,7 +2,7 @@
 
 This repository contains code related to the paper: XXX
 
-Code for the CNN model and various types of sequencing experiments can be found in the corresponding folders. Instructions for scripts of the CNN model can be found below. All other scripts were written in R or Python, and are straightforward to use.
+Code for the CNN model and various types of sequencing experiments can be found in the corresponding folders. Instructions for scripts of the CNN model can be found below. Other scripts were written in R or Bash using standard packages.
 
 ## CNN instructions
 To investigate Aire’s target choices, we built and trained a CNN model with dilated convolutional layers and residual skip connections to distinguish the extended-promoter sequences of Aire-induced and Aire-neutral genes. We followed the pre-training and then fine-tuning paradigm, given the relatively small number of Aire-induced and Aire-neutral genes compared with the typical training sizes employed for large-scale models. Below detailed the required coding environment and script usage.

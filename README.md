@@ -1,14 +1,19 @@
-# CNN for Aire's target choices
+# Aire's target choices
 
+This repository contains code related to the paper: XXX
+
+Code for the CNN model and various types of sequencing experiments can be found in the corresponding folders. Instructions for scripts of the CNN model can be found below. All other scripts were written in R or Python, and are straightforward to use.
+
+## CNN instructions
 To investigate Aire’s target choices, we built and trained a CNN model with dilated convolutional layers and residual skip connections to distinguish the extended-promoter sequences of Aire-induced and Aire-neutral genes. We followed the pre-training and then fine-tuning paradigm, given the relatively small number of Aire-induced and Aire-neutral genes compared with the typical training sizes employed for large-scale models. Below detailed the required coding environment and script usage.
 
-## Pre-training
-### Environment setup
+### Pre-training
+#### Environment setup
 Code for building and pre-training the CNN was developed using Python 3.6 and a variety of well-developed packages. To prepare for the pre-training environment using Anaconda, run the following:
 ```
 conda env create -f pretrain.yml
 ```
-### Scripts
+#### Scripts
 All the utility functions are included in the script `model_main.py`.
 
 `pretrain_data.py` is used to modify the datasets of Basenji2[^1] for the pre-training purpose. Here is an example of the usage:
@@ -31,20 +36,8 @@ python run_pretrain.py ${tfr_path} ${loss} ${weight}
     ${loss} == 3: PoissonMultinomialPretrain(total_weight = ${weight})
   ${weight}: An argument for the loss function.
 ```
-## Fine-tuning
-### Environment setup
-Code for fine-tuning the CNN was also developed using Python 3.6. To prepare for the fine-tuning environment, install the following packages in a new conda environment:
-- tensorflow (2.3.0)
-- keras (2.4.3) 
-- tensorflow-addons (0.11.1)
-- pandas (1.1.0)
-- matplotlib (3.3.0)
-- scipy (1.4.1)
-- scikit-learn (0.23.2)
-- pillow (7.2.0)
-- h5py (2.10.0)
-
-### Scripts
+### Fine-tuning
+#### Scripts
 All the utility functions are included in the scripts `model_main.py` and `utility_functions.py`.
 
 `finetune_data.py` included the functions used to generate the TFRecords for fine-tuning.

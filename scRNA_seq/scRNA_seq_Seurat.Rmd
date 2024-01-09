@@ -1,0 +1,126 @@
+---
+title: "scRNA_seq_Seurat"
+author: "Yuan Fang"
+date: "1/9/2024"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+library(Seurat)
+library(patchwork)
+library(ggplot2)
+library(ggrepel)
+library(readxl)
+```
+
+*Initialization*
+```{r}
+# Load the dataset
+sc.data <- Read10X(data.dir = "./Counts/filtered_feature_bc_matrix_raw/")
+sc_rna <- CreateSeuratObject(counts = sc.data[[1]], project = "mtecs", min.cells = 3, min.features = 200)
+joint.bcs <- intersect(colnames(sc_rna@assays$RNA@counts), colnames(sc.ht))
+sc.ht <- sc.ht[, joint.bcs]
+sc_rna[["HT"]] <- CreateAssayObject(counts = sc.ht)
+```
+
+*QC and selecting cells for further analysis*
+```{r}
+# Normalize HT data
+sc_rna <- NormalizeData(sc_rna, assay = "HT", normalization.method = "CLR")
+sc_rna <- HTODemux(sc_rna, assay = "HT", positive.quantile = 0.99, init = 7, seed = 42)
+
+# Filter cells for downstream analysis
+sc_rna[["percent.mt"]] <- PercentageFeatureSet(sc_rna, pattern = "^mt-")
+sc_cleaned <- subset(sc_rna, 
+                     subset = (nFeature_RNA > 200) & (nFeature_RNA < 7000) & 
+                         (percent.mt < 10) & (HT_classification.global == "Singlet"))
+```
+
+*Normalization, scale, PCA and UMAP*
+```{r}
+sc_cleaned <- NormalizeData(sc_cleaned, normalization.method = "LogNormalize", scale.factor = 10000)
+sc_cleaned <- FindVariableFeatures(sc_cleaned, selection.method = "vst", nfeatures = 2000)
+
+# Identify the 20 most highly variable genes
+top20 <- head(VariableFeatures(sc_cleaned), 20)
+
+# plot variable features with and without labels
+plot1 <- VariableFeaturePlot(sc_cleaned)
+LabelPoints(plot = plot1, points = top20, repel = TRUE)
+ggplot2::ggsave("plots/hvg_expressions_top20.pdf", height = 10, width = 11)
+
+all.genes <- rownames(sc_cleaned)
+sc_cleaned <- ScaleData(sc_cleaned, features = all.genes)
+
+sc_cleaned <- RunPCA(sc_cleaned, features = VariableFeatures(object = sc_cleaned))
+sc_cleaned <- JackStraw(sc_cleaned, num.replicate = 100, dims = 50)
+sc_cleaned <- ScoreJackStraw(sc_cleaned, dims = 1:50)
+
+kept_dim <- 50
+sc_cleaned <- FindNeighbors(sc_cleaned, dims = 1:kept_dim, k.param = 20) 
+chosen_res <- 1.55
+sc_cleaned <- FindClusters(sc_cleaned, resolution = chosen_res) 
+sc_cleaned <- RunUMAP(sc_cleaned, dims = 1:kept_dim)
+
+DimPlot(sc_cleaned, reduction = "umap", label = TRUE)
+ggplot2::ggsave("DimPlot_UMAP_res1.55.pdf", height = 5, width = 6)
+
+saveRDS(sc_cleaned, file = "./sc_mtecs_filtered.rds")
+```
+
+*Find marker genes*
+```{r}
+mtec.markers <- FindAllMarkers(sc_cleaned, only.pos = TRUE, min.pct = 0.1, logfc.threshold = log(2), random.seed = 42)
+mtec.markers %>%
+    group_by(cluster) %>%
+    slice_max(n = 5, order_by = avg_log2FC)
+mtec.markers <- mtec.markers %>% filter(p_val_adj<0.01)
+write.table(mtec.markers, "cluster_markers_res1.55_fc2_adjp0.01_pct0.1.txt",
+            sep = '\t', quote = FALSE, row.names = TRUE, col.names = TRUE)
+```
+
+```{r}
+all_gene_info_comparison <- function(ident1, ident2, sub_ident, ident_label){
+  deg_df <- FindMarkers(sc_cleaned, ident.1 = ident1, ident.2 = ident2 , group.by = "condition", 
+                         subset.ident = sub_ident, min.pct = 0, logfc.threshold = 0)
+  print(head(deg_df))
+  
+  deg_df$gene <- rownames(aire_deg)
+  write.table(deg_df, paste0(ident1, "_vs_", ident2, "_c", ident_label, ".txt"),
+            sep = '\t', quote = FALSE, row.names = FALSE, col.names = TRUE)
+  return(deg_df)
+}
+```
+
+*Plotting*
+```{r}
+plot_signature_genes <- function(sig_f, ident1, ident2, sub_ident, deg_df, sig_name, color, bg_color){
+  sig_df <- read.table(sig_f, header = T, row.names = NULL, sep = "\t", quote = "")
+  feature_names <- sig_df$gene_name
+  deg_df <- deg_df %>% mutate(label = ifelse(gene %in% feature_names, 'Signature genes', 'Others'))
+  
+  ggplot()+
+    geom_point(data=deg_df %>% filter(label=='Others'), 
+             mapping=aes(x = avg_log2FC, y = -log10(p_val), fill='Others', color='Others'), size= 0.5, alpha=0.7)+
+    geom_point(data=deg_df %>% filter(label=='Signature genes'), 
+             mapping=aes(x = avg_log2FC, y = -log10(p_val), fill='Signature genes',color='Signature genes'), size= 1, alpha=0.8)+
+    scale_fill_manual(values = c('Others'=bg_color, 'Signature genes'=color),
+                    name="Gene type")+
+    scale_color_manual(values = c('Others'=bg_color, 'Signature genes'=color),
+                    name="Gene type")+
+    geom_vline(xintercept = 0, linetype='dotted')+
+    theme_classic()+
+    ylim(0,4)+
+    xlim(-0.5,0.5)+
+    xlab(paste0('log2(FC): ', ident1, ' vs ', ident2))+
+    ylab('-log10(p value)')+
+    theme(axis.text = element_text(size=12),
+          axis.title = element_text(size=14),
+          plot.title.position = 'plot', 
+          plot.title = element_text(hjust = 0.5, size=18))
+  ggsave(paste0('volcano_', sig_name, "_", ident1, "_vs_", ident2, "_c", sub_ident,'.pdf'), 
+         width = 7, height = 5)
+}
+```
+

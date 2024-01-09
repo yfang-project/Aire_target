@@ -1,6 +1,7 @@
 # Aire's target choices
 
-This repository contains code related to the paper: XXX
+This repository contains code related to the paper: Aire relies on Z-DNA to flag gene targets for thymic T-cell tolerization.
+
 
 Code for the CNN model and various types of sequencing experiments can be found in the corresponding folders. Instructions for scripts of the CNN model can be found below. Other scripts were written in R or Bash using standard packages.
 
